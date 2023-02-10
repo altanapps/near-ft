@@ -18,9 +18,7 @@ pub const FT_METADATA_SPEC: &str = "ft-1.0.0";
 #[near_bindgen]
 #[derive(BorshDeserialize, BorshSerialize, PanicOnDefault)]
 pub struct Contract {
-    /*
-        FILL THIS IN
-    */
+    pub metadata: LazyOption<FungibleTokenMetadata>
 }
 
 /// Helper structure for keys of the persistent collections.
@@ -36,10 +34,18 @@ impl Contract {
     /// default metadata (for example purposes only).
     #[init]
     pub fn new_default_meta(owner_id: AccountId, total_supply: U128) -> Self {
-        /*
-            FILL THIS IN
-        */
-        todo!(); //remove once code is filled in.
+        Self::new(
+            owner_id,
+            total_supply, 
+            FungibleTokenMetadata {
+                spec: FT_METADATA_SPEC.to_string(),
+                name: "Altan's FT".to_string(),
+                symbol: "gtNEAR".to_string(),
+                icon: Some(DATA_IMAGE_SVG_GT_ICON.to_string()),
+                decimals: 24, 
+                reference: None,
+            },
+        )
     }
 
     /// Initializes the contract with the given total supply owned by the given `owner_id` with
@@ -50,9 +56,11 @@ impl Contract {
         total_supply: U128,
         metadata: FungibleTokenMetadata,
     ) -> Self {
-        /*
-            FILL THIS IN
-        */
-        todo!(); //remove once code is filled in.
+        Self{
+            metadata: LazyOption::new(
+                StorageKey::Metadata.try_to_vec().unwrap(),
+                Some(&metadata)
+            )
+        }
     }
 }
