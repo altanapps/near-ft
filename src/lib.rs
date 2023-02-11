@@ -6,6 +6,7 @@ use near_sdk::{env, near_bindgen, AccountId, Balance, PanicOnDefault, StorageUsa
 pub mod ft_core;
 pub mod metadata;
 pub mod storage;
+pub mod internal;
 
 use crate::metadata::*;
 
@@ -18,7 +19,9 @@ pub const FT_METADATA_SPEC: &str = "ft-1.0.0";
 #[near_bindgen]
 #[derive(BorshDeserialize, BorshSerialize, PanicOnDefault)]
 pub struct Contract {
-    pub metadata: LazyOption<FungibleTokenMetadata>
+    pub metadata: LazyOption<FungibleTokenMetadata>,
+    pub total_supply: Balance, // Special type to keep the balance of the token
+    pub accounts_to_balance: LookupMap<AccountId, Balance>,
 }
 
 /// Helper structure for keys of the persistent collections.
@@ -56,11 +59,17 @@ impl Contract {
         total_supply: U128,
         metadata: FungibleTokenMetadata,
     ) -> Self {
-        Self{
+        let mut this = Self{
+            total_supply: total_supply.0,
+            accounts_to_balance: LookupMap::new(StorageKey::Accounts.try_to_vec().unwrap()),
             metadata: LazyOption::new(
                 StorageKey::Metadata.try_to_vec().unwrap(),
                 Some(&metadata)
             )
         }
+
+        // .into() leaves the conversation to the compiler
+        this.accounts_to_balance.set(&owner_id, total_supply.into())
+        this
     }
 }

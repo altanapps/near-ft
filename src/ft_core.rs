@@ -81,17 +81,12 @@ impl FungibleTokenCore for Contract {
     }
 
     fn ft_total_supply(&self) -> U128 {
-        /*
-            FILL THIS IN
-        */
-        todo!(); //remove once code is filled in.
+        // Return the total supply by casting then into the U128 type
+        self.total_supply.into()
     }
 
     fn ft_balance_of(&self, account_id: AccountId) -> U128 {
-        /*
-            FILL THIS IN
-        */
-        todo!(); //remove once code is filled in.
+        self.accounts_to_balance(&account_id).unwrap_or(0).into()
     }
 }
 
