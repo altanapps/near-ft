@@ -86,7 +86,7 @@ impl FungibleTokenCore for Contract {
     }
 
     fn ft_balance_of(&self, account_id: AccountId) -> U128 {
-        self.accounts_to_balance(&account_id).unwrap_or(0).into()
+        self.accounts_to_balance.get(&account_id).unwrap_or(0).into()
     }
 }
 

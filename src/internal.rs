@@ -11,7 +11,7 @@ impl Contract {
         let balance = self.accounts_to_balance.get(&account_id).unwrap_or(0);
 
         if let Some (new_balance) = balance.checked_add(amount) {
-            self.accounts_to_balance.insert(&account_id, new_balance);
+            self.accounts_to_balance.insert(&account_id, &new_balance);
         } else {
             env::panic_str("Balance overflow");
         }
