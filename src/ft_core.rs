@@ -61,9 +61,14 @@ pub trait FungibleTokenCore {
 impl FungibleTokenCore for Contract {
     #[payable]
     fn ft_transfer(&mut self, receiver_id: AccountId, amount: U128, memo: Option<String>) {
-        /*
-            FILL THIS IN
-        */
+        
+        assert_one_yocto();
+
+        let sender_id = env::predecessor_account_id();
+
+        let amount: Balance = amount.into();
+
+        self.internal_transfer(&sender_id, &receiver_id, amount);
     }
 
     #[payable]
@@ -74,10 +79,28 @@ impl FungibleTokenCore for Contract {
         memo: Option<String>,
         msg: String,
     ) -> PromiseOrValue<U128> {
-        /*
-            FILL THIS IN
-        */
-        todo!(); //remove once code is filled in.
+        // Transfer the token from one side to another
+        // Assert that there is one yocto is attached by the user
+        assert_one_yocto();
+
+        let sender_id: AccountId = env::predecessor_account_id();
+
+        let amount: Balance = amount.into();
+
+        self.internal_transfer(&sender_id, &receiver_id, amount, memo);
+
+        // Initiating receiver's call and the callback
+        // Defaulting GAS weight to 1, no attached deposit, and static GAS equal to the GAS for ft transfer call.
+        ext_ft_receiver::ext(receiver_id.clone())
+        .with_static_gas(GAS_FOR_FT_TRANSFER_CALL)
+        .ft_on_transfer(sender_id.clone(), amount.into(), msg)
+        // We then resolve the promise and call ft_resolve_transfer on our own contract
+        // Defaulting GAS weight to 1, no attached deposit, and static GAS equal to the GAS for resolve transfer
+        .then(
+            Self::ext(env::current_account_id())
+                .with_static_gas(GAS_FOR_RESOLVE_TRANSFER)
+                .ft_resolve_transfer(&sender_id, receiver_id, amount.into()),
+        ).into()
     }
 
     fn ft_total_supply(&self) -> U128 {
@@ -154,9 +177,21 @@ impl Contract {
         receiver_id: AccountId,
         amount: U128,
     ) -> U128 {
-        /*
-            FILL THIS IN
-        */
-        todo!(); //remove once code is filled in.
+        let amount: Balance = amount.into();
+
+        let unused_amount = match env::promise_result(0) {
+            PromiseResult::NotReady => env.abort(),
+            PromiseResult::Successful(value) => {
+                // If we can properly parse the value, the unused amount is equal to whatever is smaller - the unused amount or the original amount (to prevent malicious contracts)
+                if let Ok(unused_amount) = near_sdk::serde_json::from_slice::<U128>(&value) {
+                    std::cmp::min(amount, unused_amount.0)
+                // If we can't properly parse the value, the original amount is returned.
+                } else {
+                    amount
+                }
+            },
+            PromiseResult::Failed => amount,
+        };
+
     }
 }
