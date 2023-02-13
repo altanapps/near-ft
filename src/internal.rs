@@ -3,7 +3,15 @@ use near_sdk::{require};
 use crate::*;
 
 impl Contract {
-    // Crate means that 
+    pub (crate) fn internal_unwrap_balance_of(&self, account_id: &AccountId) -> Balance {
+        match self.accounts_to_balance.get(account_id) {
+            Some(balance) => balance,
+            None => {
+                env::panic_str(format!("The account {} is not registered", &account_id).as_str())
+            }
+        }
+    }
+
     pub(crate) fn internal_deposit (&mut self, receiver_id: &AccountId,
     amount: Balance) {
         // Get the current balance of the account
@@ -14,6 +22,13 @@ impl Contract {
             self.accounts_to_balance.insert(&receiver_id, &new_balance);
         } else {
             env::panic_str("Balance overflow");
+        }
+    }
+
+    /// Internal method for registering an account with the contract.
+    pub(crate) fn internal_register_account(&mut self, account_id: &AccountId) {
+        if self.accounts_to_balance.insert(account_id, &0).is_some() {
+            env::panic_str("The account is already registered");
         }
     }
 
@@ -37,8 +52,8 @@ impl Contract {
         require!(amount>0, "Ensure that the amount sent is greater than 0");
 
         // Withdraw from the sender and deposit into the receiver
-        internal_withdraw(sender_id, amount);
-        internal_deposit(receiver_id, amount);
+        self.internal_withdraw(sender_id, amount);
+        self.internal_deposit(receiver_id, amount);
 
         // Emit a Transfer event
         FtTransfer {

@@ -68,7 +68,7 @@ impl FungibleTokenCore for Contract {
 
         let amount: Balance = amount.into();
 
-        self.internal_transfer(&sender_id, &receiver_id, amount);
+        self.internal_transfer(&sender_id, &receiver_id, amount, memo);
     }
 
     #[payable]
@@ -180,7 +180,7 @@ impl Contract {
         let amount: Balance = amount.into();
 
         let unused_amount = match env::promise_result(0) {
-            PromiseResult::NotReady => env.abort(),
+            PromiseResult::NotReady => env::abort(),
             PromiseResult::Successful(value) => {
                 // If we can properly parse the value, the unused amount is equal to whatever is smaller - the unused amount or the original amount (to prevent malicious contracts)
                 if let Ok(unused_amount) = near_sdk::serde_json::from_slice::<U128>(&value) {
@@ -193,5 +193,23 @@ impl Contract {
             PromiseResult::Failed => amount,
         };
 
+        if unused_amount > 0 {
+            let receiver_balance = self.accounts_to_balance.get(&receiver_id).unwrap_or(0);
+            if receiver_balance > 0 {
+                let refund_amount = std::cmp::min(receiver_balance, unused_amount);
+
+                // Refund the sender for the unused amount.
+                self.internal_transfer(&receiver_id, &sender_id, refund_amount, Some("Refund".to_string()));
+            
+                // Return what was actually used (the amount sent - refund)
+                let used_amount = amount
+                    .checked_sub(refund_amount)
+                    .unwrap_or_else(|| env::panic_str("Total supply overflow"));
+                return used_amount.into();
+            }
+        }
+
+        // If the unused amount is 0, return the original amount.
+        amount.into()
     }
 }

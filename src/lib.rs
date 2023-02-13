@@ -24,6 +24,7 @@ pub struct Contract {
     pub metadata: LazyOption<FungibleTokenMetadata>,
     pub total_supply: Balance, // Special type to keep the balance of the token
     pub accounts_to_balance: LookupMap<AccountId, Balance>,
+    pub bytes_for_longest_account_id: StorageUsage,
 }
 
 /// Helper structure for keys of the persistent collections.
@@ -63,6 +64,7 @@ impl Contract {
     ) -> Self {
         let mut this = Self{
             total_supply: total_supply.0,
+            bytes_for_longest_account_id: 0,
             accounts_to_balance: LookupMap::new(StorageKey::Accounts.try_to_vec().unwrap()),
             metadata: LazyOption::new(
                 StorageKey::Metadata.try_to_vec().unwrap(),
